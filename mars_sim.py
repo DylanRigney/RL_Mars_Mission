@@ -8,7 +8,7 @@ physicsClient = p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 
-# Setup heightmap
+# # Setup environment
 # -----------------------------------------------------------------------------------------------
 
 # Set the path to your heightmap image
@@ -26,39 +26,64 @@ width, height = heightmap_image.size
 # Get the pixel values as a NumPy array
 heightmap_data = np.asarray(heightmap_image, dtype=np.float32)
 
-# Normalize the heightmap data to the range [0, 1]
-heightmap_data /= 255.0
+
+# Normalize again to keep values between 0 and 1
+heightmap_data = (heightmap_data - np.min(heightmap_data)) / (np.max(heightmap_data) - np.min(heightmap_data))
+
+# Add some noise so the terrain is not flat
+noise = np.random.normal(0, 0.002, heightmap_data.shape)  
+heightmap_data += noise
+
 
 # Create a heightfield shape
 terrain_shape = p.createCollisionShape(
     shapeType=p.GEOM_HEIGHTFIELD,
-    meshScale=[0.1, 0.1, 0.1],
-    heightfieldTextureScaling=(width - 1) / 2,
+    meshScale=[1, 1, 10],
+    heightfieldTextureScaling=512 / 2,
     heightfieldData=heightmap_data.flatten(),
-    numHeightfieldRows=height,
-    numHeightfieldColumns=width
+    numHeightfieldRows=256,
+    numHeightfieldColumns=256
 )    
-
-
-# Setup environment
-# -----------------------------------------------------------------------------------------------
 
 # Create a multi-body object for the terrain
 terrain = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=terrain_shape, basePosition=[0, 0, 0])
+
+p.changeVisualShape(terrain, -1, rgbaColor=[0.8, 0.4, 0.2, 1])  # Reddish-brown Mars color
 
 p.resetBasePositionAndOrientation(terrain, [0, 0, 0], [0, 0, 0, 1])
 
 # mars gravity
 p.setGravity(0, 0, -3.72)
 
+
 # Rover Setup
 # -----------------------------------------------------------------------------------------------
 
-roverId = p.loadURDF("husky/husky.urdf", basePosition=[0,0,0.2])
+roverId = p.loadURDF("husky/husky.urdf", basePosition=[0,0,2.5])
 
-# Key mapping
+# Key mapping for manual drive
 keys = {p.B3G_UP_ARROW: "forward", p.B3G_DOWN_ARROW: "backward",
         p.B3G_LEFT_ARROW: "left", p.B3G_RIGHT_ARROW: "right"}
+
+# Get Observation
+def get_observation(rover_id):
+    # 1. Get Position and Orientation
+    position, orientation = p.getBasePositionAndOrientation(rover_id)
+    orientation_euler = p.getEulerFromQuaternion(orientation)
+    
+    # 2. Get Linear and Angular Velocity
+    linear_velocity, angular_velocity = p.getBaseVelocity(rover_id)
+    
+    # 3. Combine into a Single Observation Array
+    observation = np.array([
+        *position,                  # x, y, z
+        *orientation_euler,         # roll, pitch, yaw
+        *linear_velocity,           # vx, vy, vz
+        *angular_velocity           # wx, wy, wz
+    ])
+    
+    return observation
+
 
 print("Start here---------------------------------------------------------------------------------")
 
@@ -75,6 +100,10 @@ for joint in wheel_joints:
 
 while True:
     p.stepSimulation()
+
+    observation = get_observation(roverId)
+
+    print("Observation:", observation)
     
     # Read keyboard events
     keys_pressed = p.getKeyboardEvents()
@@ -102,3 +131,4 @@ while True:
     p.setJointMotorControl2(roverId, wheel_joints[3], p.VELOCITY_CONTROL, targetVelocity=target_velocity - turn_factor, force=max_force)
 
     time.sleep(1./240.)  # Maintain real-time simulation speed
+
