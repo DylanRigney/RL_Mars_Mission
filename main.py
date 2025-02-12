@@ -1,16 +1,26 @@
+import random
+import time
+import pybullet as p
+import numpy as np
+
 from env.mars_env import MarsEnv
 
 def main():
     env = MarsEnv()
-    env.reset()
+    done = False
+    total_reward = 0
 
-    for _ in range(1000):
-        action = env.sample_action()
-        obs, reward, done, info = env.step(action)
-        env.render()
+    while not done:
+        action = (random.randint(-10, 10), random.randint(-10, 10)) # TODO: Implement sample_action
+        obs, reward, done = env.step(action)
         
-        if done:
-            env.reset()
+        total_reward += reward
+
+        print(f"Action: {action}, Observation: {obs}, Reward: {reward}, Total Reward: {total_reward}")
+        
+
+    p.disconnect()
+    print("Episode finished with total reward:", total_reward)
 
 if __name__ == "__main__":
     main()

@@ -1,21 +1,67 @@
+import pybullet as p
+import numpy as np
+
 class Rover:
-    def __init__(self):
-        self.id = p.loadURDF("husky/husky.urdf", basePosition=[0,0,2.5]) # Load Husky URDF
+    def __init__(self, position=[0, 0, 0.1]):
         # self.id = p.loadURDF("r2d2.urdf")  # Load R2D2 URDF
+        self.rover_id = p.loadURDF("husky/husky.urdf", basePosition=[0,0,2]) # Load Husky URDF
+        self.wheels= [2, 3, 4, 5] # front_left, front_right, rear_left, rear_right
+
+        # Define discrete actions: 0 - Forward, 1 - Left, 2 - Right, 3 - Stop
+        self.action_space = [0, 1, 2, 3]
+
 
     def reset(self):
-        p.resetBasePositionAndOrientation(self.id, [0, 0, 2.5], [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.rover_id, [0, 0, 2.5], [0, 0, 0, 1])
 
     def apply_action(self, action):
-        raise NotImplementedError # TODO: Implement apply_action
+        max_force = 100
+        target_velocity = 10 
+
+        # Discrete Action Space:
+        if action == 0:  # Move Forward
+            wheel_velocities = [target_velocity] * 4
+        elif action == 1:  # Turn Left
+            wheel_velocities = [target_velocity, target_velocity, -target_velocity, -target_velocity]
+        elif action == 2:  # Turn Right
+            wheel_velocities = [-target_velocity, -target_velocity, target_velocity, target_velocity]
+        elif action == 3:  # Stop
+            wheel_velocities = [0] * 4
+        else:
+            raise ValueError("Invalid Action")
+        
+        for wheel, velocity in zip(self.wheels, wheel_velocities):
+            p.setJointMotorControl2(bodyUniqueId=self.rover,
+                                    jointIndex=wheel,
+                                    controlMode=p.VELOCITY_CONTROL,
+                                    targetVelocity=velocity,
+                                    force=max_force)
+
+        """ 
+        Continoutous Action Space:
+        left_speed, right_speed = action
+
+        # Clip velocities to max limits
+        left_speed = np.clip(left_speed, -self.maxvelocity, self.maxvelocity)
+        right_speed = np.clip(right_speed, -self.maxvelocity, self.maxvelocity)
+
+        # Apply velocities to the corresponding wheels
+        p.setJointMotorControl2(self.rover_id, self.wheel_joints[0], p.VELOCITY_CONTROL,
+                                targetVelocity=left_speed, force=self.max_force)
+        p.setJointMotorControl2(self.rover_id, self.wheel_joints[1], p.VELOCITY_CONTROL, 
+                                targetVelocity=right_speed, force=self.max_force)        
+        p.setJointMotorControl2(self.rover_id, self.wheel_joints[2], p.VELOCITY_CONTROL, 
+                                targetVelocity=left_speed, force=self.max_force)
+        p.setJointMotorControl2(self.rover_id, self.wheel_joints[3], p.VELOCITY_CONTROL, 
+                                targetVelocity=right_speed, force=self.max_force) """
     
-    def get_observation(self, rover_id):
+    def get_observation(self):
         # Get Position and Orientation
-        position, orientation = p.getBasePositionAndOrientation(rover_id)
+        position, orientation = p.getBasePositionAndOrientation(self.rover_id)
         orientation_euler = p.getEulerFromQuaternion(orientation)
 
         # Get Linear and Angular Velocity
-        linear_velocity, angular_velocity = p.getBaseVelocity(rover_id)
+        linear_velocity, angular_velocity = p.getBaseVelocity(self.rover_id)
 
         # Combine into a Single Observation Array
         observation = np.array([
