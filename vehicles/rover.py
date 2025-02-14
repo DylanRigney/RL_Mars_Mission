@@ -2,12 +2,12 @@ import pybullet as p
 import numpy as np
 
 class Rover:
-    def __init__(self, position=[0, 0, 0.1]):
-        # self.id = p.loadURDF("r2d2.urdf")  # Load R2D2 URDF
-        self.rover_id = p.loadURDF("husky/husky.urdf", basePosition=[0,0,2]) # Load Husky URDF
-        self.wheels= [2, 3, 4, 5] # front_left, front_right, rear_left, rear_right
-
-        # Define discrete actions: 0 - Forward, 1 - Left, 2 - Right, 3 - Stop
+    def __init__(self, position=[0, 0, 2]):
+         # Load the Husky rover URDF.
+        self.rover_id = p.loadURDF("husky/husky.urdf", basePosition=position)
+        # Wheel joint indices for Husky.
+        self.wheels = [2, 3, 4, 5]
+        # Define a discrete action space: 0: Forward, 1: Turn Left, 2: Turn Right, 3: Stop.
         self.action_space = [0, 1, 2, 3]
 
 
@@ -74,4 +74,5 @@ class Rover:
         return observation
 
     def sample_action(self):
-        raise NotImplementedError # TODO: Implement sample_action
+        # Sample randomly from the discrete action space.
+        return np.random.choice(self.action_space)
