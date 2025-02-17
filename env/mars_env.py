@@ -4,6 +4,7 @@ import pybullet_data
 from PIL import Image
 from vehicles.rover import Rover
 import random
+from math import dist
 from gym import spaces
 
 class MarsEnv:
@@ -20,7 +21,7 @@ class MarsEnv:
         self.rover = Rover()
 
         # Define a random goal position (adjust as needed)
-        self.goal_position = [random.randint(0, 10), random.randint(0, 10), 10] # goal position
+        self.goal_position = [random.randint(-20, -12), random.randint(0, 8), 1] # goal position
         self.goal_id = p.loadURDF("sphere2.urdf", self.goal_position, globalScaling=0.5)
 
         # Define the observation space and action space
@@ -44,7 +45,7 @@ class MarsEnv:
         # Create the terrain collision shape
         terrain_shape = p.createCollisionShape(
             shapeType=p.GEOM_HEIGHTFIELD,
-            meshScale=[1, 1, 8],
+            meshScale=[1, 1, 3],
             heightfieldData=heightmap_data.flatten(),
             numHeightfieldRows=heightmap_data.shape[0],
             numHeightfieldColumns=heightmap_data.shape[1]
@@ -56,16 +57,20 @@ class MarsEnv:
         return terrain_id
 
     def reset(self):
-        # Reset the simulation and reinitialize environment objects
-        p.resetSimulation()
-        self.terrain_id = self.create_mars_terrain()
+        # Make sure rover and goal don't start to close
+        while True:
+            rover_x, rover_y = random.randint(-16, -10), random.randint(-2, 8)
+            goal_x, goal_y = random.randint(-16, -10), random.randint(-2, 8)
+            
+            if dist([rover_x, rover_y], [goal_x, goal_y]) > 2:
+                break
 
-        # Recreate the rover and goal after reset:
-        self.rover.reset()
-        self.goal_position = [random.randint(0, 10), random.randint(0, 10), 10]
-        self.goal_id = p.loadURDF("sphere2.urdf", self.goal_position, globalScaling=0.5)
-        
-        # Return initial observation
+        # reposition the rover:
+        self.rover.reset([rover_x, rover_y, 1])
+       
+        # Reposition the goal to a new random location
+        p.resetBasePositionAndOrientation(self.goal_id, [goal_x, goal_y, 1], [0, 0, 0, 1])
+
         return self.rover.get_observation()
 
     def step(self, action):
@@ -87,7 +92,7 @@ class MarsEnv:
         
         # Reward: Negative distance penalty; bonus upon reaching goal
         reward = -distance_to_goal # Closer = higher reward (less negative)
-        done = distance_to_goal < .5 # Task is done when the rover reaches the goal
+        done = distance_to_goal < 1 # Task is done when the rover reaches the goal
 
         if done:
             reward += 100 # Bonus reward for reaching the goal

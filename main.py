@@ -1,57 +1,68 @@
 import time
-import pybullet as p
-import numpy as np
 import torch
-from env.mars_env import MarsEnv  # Make sure the path matches your project structure
-from agents.dqn_agent import DQNAgent
+import numpy as np
+from env.mars_env import MarsEnv  # Ensure this path matches your project structure
+from agents.dqn_agent import DQNAgent  # Ensure this path matches your project structure
 
 def main():
+    # Set training hyperparameters
+    EPISODES = 10          # Total number of episodes for training
+    TARGET_UPDATE_FREQ = 10   # Frequency (in episodes) to update the target network
+    RENDER_EVERY = 50         # Render environment every X episodes (optional)
+    
     # Initialize the Mars environment
     env = MarsEnv()
     
-    # Retrieve observation and action space dimensions from the environment
+    # Get state and action dimensions from the environment's spaces
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
     
-    # Create the DQN agent with the appropriate dimensions
+    # Initialize the DQN agent with the given state and action dimensions
     agent = DQNAgent(state_size, action_size)
     
-    # Set the number of episodes for training
-    EPISODES = 1000
-    TARGET_UPDATE_FREQ = 10  # How often to update the target network
-    
+    # Training loop: iterate over episodes
     for episode in range(EPISODES):
-        state = env.reset()  # Reset the environment at the start of each episode
+        state = env.reset()  # Reset the environment and obtain the initial state
         total_reward = 0
         done = False
         
+        # Loop for each step of the episode until termination
         while not done:
-            # Agent selects an action using epsilon-greedy strategy
+            # Agent selects an action using epsilon-greedy policy
             action = agent.act(state)
-            # Environment takes the action and returns next_state, reward, done flag, and extra info
+            
+            # Environment processes the action and returns next_state, reward, done flag, and extra info
             next_state, reward, done, _ = env.step(action)
             
             # Store the experience in the replay buffer
             agent.remember(state, action, reward, next_state, done)
             
-            # Train the agent using a minibatch from the replay buffer
+            # Train the agent with a minibatch from the replay buffer
             agent.replay()
             
+            # Update state and accumulate reward
             state = next_state
             total_reward += reward
         
-        # Periodically update the target network for stability
+        # Update the target network every TARGET_UPDATE_FREQ episodes for stable learning
         if episode % TARGET_UPDATE_FREQ == 0:
             agent.update_target_network()
         
-        print(f"Episode {episode + 1}/{EPISODES}, Reward: {total_reward}, Epsilon: {agent.epsilon:.3f}")
-        time.sleep(0.1)  # Optional: slow down logging for readability
-
-    # Save the trained model weights for later use
+        # Print training progress for this episode
+        print(f"Episode {episode + 1}/{EPISODES}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.3f}")
+        
+        # Optionally render the environment every few episodes (if render is implemented)
+        if episode % RENDER_EVERY == 0:
+            # You can implement a render() method in your MarsEnv if desired.
+            env.render()
+            time.sleep(1)  # Pause briefly for visualization
+    
+    # Save the trained Q-network weights for later evaluation or deployment
     torch.save(agent.q_network.state_dict(), "models/dqn_mars_rover.pth")
     print("Training complete! Model saved.")
-
-    p.disconnect()
+    
+    # Close the environment connection
+    env.close()
 
 if __name__ == "__main__":
     main()
