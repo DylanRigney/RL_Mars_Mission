@@ -6,7 +6,7 @@ from agents.dqn_agent import DQNAgent  # Ensure this path matches your project s
 
 def main():
     # Set training hyperparameters
-    EPISODES = 10          # Total number of episodes for training
+    EPISODES = 100          # Total number of episodes for training
     TARGET_UPDATE_FREQ = 10   # Frequency (in episodes) to update the target network
     RENDER_EVERY = 50         # Render environment every X episodes (optional)
     
@@ -27,12 +27,14 @@ def main():
         done = False
         
         # Loop for each step of the episode until termination
+        step_count = 0
         while not done:
             # Agent selects an action using epsilon-greedy policy
             action = agent.act(state)
             
             # Environment processes the action and returns next_state, reward, done flag, and extra info
-            next_state, reward, done, _ = env.step(action)
+            step_count += 1
+            next_state, reward, done, _ = env.step(action, step_count)
             
             # Store the experience in the replay buffer
             agent.remember(state, action, reward, next_state, done)

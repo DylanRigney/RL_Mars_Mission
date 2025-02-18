@@ -9,7 +9,7 @@ from PIL import Image
 tile_url = "http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola-gray/4/2/2.png"
 
 # Define the local file path to save the image
-heightmap_path = "mars_heightmap.png"
+heightmap_path = "/assets/mars_heightmap.png"
 
 # Download the image
 response = requests.get(tile_url)
