@@ -6,7 +6,7 @@ from agents.dqn_agent import DQNAgent  # Ensure this path matches your project s
 
 def main():
     # Set training hyperparameters
-    EPISODES = 100          # Total number of episodes for training
+    EPISODES = 1000          # Total number of episodes for training
     TARGET_UPDATE_FREQ = 10   # Frequency (in episodes) to update the target network
     RENDER_EVERY = 50         # Render environment every X episodes (optional)
     

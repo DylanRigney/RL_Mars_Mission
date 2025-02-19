@@ -18,11 +18,11 @@ class MarsEnv:
         self.terrain_id = self.create_mars_terrain()
 
         # Create the rover and set its location (this loads the Husky model) 
-        rover_x, rover_y, rover_z = random.randint(-6, 6), random.randint(-6, 6), .5
+        rover_x, rover_y, rover_z = random.randint(-8, 8), random.randint(-8, 8), 1
         self.rover = Rover(rover_x, rover_y, rover_z)   
 
         # Define a random goal position (adjust as needed)
-        goal_x, goal_y = random.randint(-6, 6), random.randint(-6, 6)
+        goal_x, goal_y = random.randint(-8, 8), random.randint(-8, 8)
         self.goal_id = p.loadURDF("sphere2.urdf", [goal_x, goal_y, 2], globalScaling=2)
 
         # Define the observation space and action space
@@ -66,8 +66,8 @@ class MarsEnv:
     def reset(self):
         # Make sure rover and goal don't start too close
         while True:
-            rover_x, rover_y = random.randint(-6, 6), random.randint(-6, 6)
-            self.goal_x, self.goal_y = random.randint(-6, 6), random.randint(-6, 6)
+            rover_x, rover_y = random.randint(-8, 8), random.randint(-8, 8)
+            self.goal_x, self.goal_y = random.randint(-8, 8), random.randint(-8, 8)
             
             if dist([rover_x, rover_y], [self.goal_x, self.goal_y]) > 2:
                 break
@@ -96,18 +96,18 @@ class MarsEnv:
         distance_to_goal = np.linalg.norm(np.array(rover_pos[:2]) - np.array(goal_pos[:2]))
         
         # Reward: Negative distance penalty; bonus upon reaching goal
-        reward = -distance_to_goal # Closer = higher reward (less negative)
+        reward =- distance_to_goal / 100 # Closer = higher reward (less negative)
         
         # Check if the rover has reached the goal
-        done = distance_to_goal < 3
+        done = distance_to_goal < 2.1
 
         # Also terminate the episode if it has taken too many steps
         if step_count >= max_steps:
             done = True
-            reward -= 50  # Penalty for not reaching the goal quickly
+            reward -= 500  # Penalty for not reaching the goal quickly
 
         if done:
-            reward += 100  # Bonus reward for reaching the goal
+            reward += 1000  # Bonus reward for reaching the goal
 
         return reward, done
 
@@ -119,7 +119,7 @@ class MarsEnv:
         p.disconnect()
 
 
-    def create_boundaries(self, map_width=15, map_length=15, wall_thickness=0.2, wall_height=1):
+    def create_boundaries(self, map_width=20, map_length=20, wall_thickness=0.2, wall_height=1):
         """
         Creates invisible boundary walls around a rectangular map.
     
