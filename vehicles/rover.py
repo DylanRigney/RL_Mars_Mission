@@ -38,22 +38,35 @@ class Rover:
                                     targetVelocity=velocity,
                                     force=max_force)
     
-    def get_observation(self):
-        # Get Position and Orientation
-        position, orientation = p.getBasePositionAndOrientation(self.rover_id)
+    def get_observation(self, goal_pos):
+        # Get Rover Position and Orientation
+        rover_pos, orientation = p.getBasePositionAndOrientation(self.rover_id)
         orientation_euler = p.getEulerFromQuaternion(orientation)
 
         # Get Linear and Angular Velocity
         linear_velocity, angular_velocity = p.getBaseVelocity(self.rover_id)
 
+        # Calculate distance and angle to goal
+        dx = goal_pos[0] - rover_pos[0]
+        dy = goal_pos[1] - rover_pos[1]
+        distance = np.sqrt(dx**2 + dy**2)
+        angle = np.arctan2(dy, dx) - orientation_euler[2] # Angle between rover and goal
+
+        # Wrap to [-π, π]
+        angle = (angle + np.pi) % (2 * np.pi) - np.pi
+
+        # Normalize distance and angle
+        normalized_distance = distance / 40
+        normalized_angle = angle / np.pi
+
         # Normalize position 
-        normalized_position = position[0] / 20
-        normalized_y = position[1] / 20
-        normalized_z = (position[2] / 5) * 2 - 1
+        normalized_position = rover_pos[0] / 20
+        normalized_y = rover_pos[1] / 20
+        normalized_z = (rover_pos[2] / 5) * 2 - 1
 
         # Normalize orientation
         normalized_roll = orientation_euler[0] / np.pi
-        normalized_pitch = orientation_euler[1] / np.pi
+        normalized_pitch = np.sin(orientation_euler[1])  # Range [-1, 1]
         normalized_yaw = orientation_euler[2] / np.pi
 
         # Normalize velocities
@@ -67,12 +80,17 @@ class Rover:
 
         # Combine into a Single Observation Array
         observation = np.array([
+            normalized_distance, normalized_angle,
             normalized_position, normalized_y, normalized_z,
             normalized_roll, normalized_pitch, normalized_yaw,
             normalized_vx, normalized_vy, normalized_vz,
             normalized_wx, normalized_wy, normalized_wz
         ])
-
+        orientation_euler = p.getEulerFromQuaternion(orientation, physicsClientId=0) 
+       
+        # print("Raw Euler Angles (roll, pitch, yaw):", orientation_euler)
+        # print("Raw Quaternion (x, y, z, w):", orientation)
+        # print("Observation:", observation)
         return observation
 
     def sample_action(self):

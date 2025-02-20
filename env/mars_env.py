@@ -25,8 +25,11 @@ class MarsEnv:
         goal_x, goal_y = random.randint(-8, 8), random.randint(-8, 8)
         self.goal_id = p.loadURDF("sphere2.urdf", [goal_x, goal_y, 2], globalScaling=2)
 
+        # fetch goal position
+        self.goal_pos, _ = p.getBasePositionAndOrientation(self.goal_id)
+
         # Define the observation space and action space
-        obs = self.rover.get_observation()
+        obs = self.rover.get_observation(self.goal_pos)
         self.obs_dim = len(obs)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.obs_dim,), dtype=np.float32)
 
@@ -73,16 +76,21 @@ class MarsEnv:
                 break
 
         # reposition the rover and goal positions:
-        self.rover.reset([rover_x, rover_y, 1])
+        self.rover.reset([rover_x, rover_y, 1.5])
         p.resetBasePositionAndOrientation(self.goal_id, [self.goal_x, self.goal_y, 2], [0, 0, 0, 1])
 
-        return self.rover.get_observation()
+        return self.rover.get_observation(self.goal_pos)
 
     def step(self, action, step_count):
         # Apply the given action on the rover
         self.rover.apply_action(action)
         p.stepSimulation() 
-        obs = self.rover.get_observation()
+
+        # fetch goal position
+        self.goal_pos, _ = p.getBasePositionAndOrientation(self.goal_id)
+    
+        # Get the new observation and calculate the reward
+        obs = self.rover.get_observation(self.goal_pos)
         reward, done = self.calculate_reward(obs, step_count)
         
         return obs, reward, done, {} # Extra info dict for compatibility
